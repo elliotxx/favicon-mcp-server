@@ -60,20 +60,11 @@ The server returns base64 encoded favicon data in the requested formats:
 }
 ```
 
-## Testing
+## Usage
 
-### Quick Test (Recommended)
+### Input Methods
 
-The simplest and most reliable way to test:
-```bash
-echo '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"svg_to_favicon","arguments":{"svg_data":"<svg width=\"32\" height=\"32\"><rect width=\"32\" height=\"32\" fill=\"red\"/></svg>"}}}' | go run main.go
-```
-
-### Using Test File
-
-If you prefer using a test file:
-
-1. Create a test file `test.json` with your test case, for example:
+1. Direct SVG Input:
 ```json
 {
   "jsonrpc": "2.0",
@@ -88,14 +79,27 @@ If you prefer using a test file:
 }
 ```
 
-2. Test using pipe (make sure to remove newlines):
-```bash
-tr -d '\n' < test.json | go run main.go
+2. SVG File Input:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "tools/call",
+  "params": {
+    "name": "svg_to_favicon",
+    "arguments": {
+      "svg_file": "path/to/your/icon.svg"
+    }
+  }
+}
 ```
 
-### Optional Parameters
+### Output Methods
 
-You can also specify output formats in the arguments:
+1. Base64 Encoded Output (Default):
+   - Returns base64 encoded ICO and PNG data in the response
+
+2. File Output:
 ```json
 {
   "jsonrpc": "2.0",
@@ -105,11 +109,42 @@ You can also specify output formats in the arguments:
     "name": "svg_to_favicon",
     "arguments": {
       "svg_data": "<svg width=\"32\" height=\"32\"><rect width=\"32\" height=\"32\" fill=\"red\"/></svg>",
+      "output_dir": "path/to/output/directory",
       "output_formats": ["ico", "png"]
     }
   }
 }
 ```
+
+When using file output:
+- ICO file will be saved as `favicon.ico`
+- PNG files will be saved as `favicon-{size}x{size}.png` (e.g., `favicon-32x32.png`)
+
+## Testing
+
+### Quick Test (Recommended)
+
+The simplest way to test with direct SVG input:
+```bash
+echo '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"svg_to_favicon","arguments":{"svg_data":"<svg width=\"32\" height=\"32\"><rect width=\"32\" height=\"32\" fill=\"red\"/></svg>"}}}' | go run main.go
+```
+
+### Using Test File
+
+If you prefer using a test file:
+
+1. Create a test file `test.json` with your test case
+2. Run the command:
+```bash
+echo $(tr -d '\n' < test/test.json) | go run main.go
+```
+
+### Parameters
+
+- `svg_data`: SVG content as a string
+- `svg_file`: Path to an SVG file
+- `output_dir`: Directory to save the output files
+- `output_formats`: Array of desired formats (`["ico", "png"]`)
 
 ## Development
 

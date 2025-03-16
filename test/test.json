@@ -1,0 +1,13 @@
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "tools/call",
+  "params": {
+    "name": "svg_to_favicon",
+    "arguments": {
+      "svg_file": "test/logo.svg",
+      "output_dir": "test/output",
+      "output_formats": ["ico", "png"]
+    }
+  }
+}
