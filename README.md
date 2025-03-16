@@ -60,6 +60,57 @@ The server returns base64 encoded favicon data in the requested formats:
 }
 ```
 
+## Testing
+
+### Quick Test (Recommended)
+
+The simplest and most reliable way to test:
+```bash
+echo '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"svg_to_favicon","arguments":{"svg_data":"<svg width=\"32\" height=\"32\"><rect width=\"32\" height=\"32\" fill=\"red\"/></svg>"}}}' | go run main.go
+```
+
+### Using Test File
+
+If you prefer using a test file:
+
+1. Create a test file `test.json` with your test case, for example:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "tools/call",
+  "params": {
+    "name": "svg_to_favicon",
+    "arguments": {
+      "svg_data": "<svg width=\"32\" height=\"32\"><rect width=\"32\" height=\"32\" fill=\"red\"/></svg>"
+    }
+  }
+}
+```
+
+2. Test using pipe (make sure to remove newlines):
+```bash
+tr -d '\n' < test.json | go run main.go
+```
+
+### Optional Parameters
+
+You can also specify output formats in the arguments:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "tools/call",
+  "params": {
+    "name": "svg_to_favicon",
+    "arguments": {
+      "svg_data": "<svg width=\"32\" height=\"32\"><rect width=\"32\" height=\"32\" fill=\"red\"/></svg>",
+      "output_formats": ["ico", "png"]
+    }
+  }
+}
+```
+
 ## Development
 
 The project follows standard Go project layout and uses Go modules for dependency management.
