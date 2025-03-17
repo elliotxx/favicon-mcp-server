@@ -4,42 +4,42 @@ A Model Control Protocol (MCP) server that converts SVG images into various favi
 
 ## Features
 
-- Convert SVG images to ICO format (16x16, 32x32, 48x48 pixels)
-- Convert SVG images to PNG format (16x16, 32x32, 48x48 pixels)
-- Base64 encoded output for easy integration
-- MCP protocol support for seamless integration with LLM-powered applications
+- **SVG to ICO Conversion**: Convert SVG images to ICO format (16x16, 32x32, 48x48 pixels).
+- **SVG to PNG Conversion**: Convert SVG images to PNG format (16x16, 32x32, 48x48 pixels).
+- **Base64 Encoded Output**: Easy integration with base64 encoded output.
+- **MCP Protocol Support**: Seamless integration with LLM-powered applications.
+
 
 ## Prerequisites
 
-- Go 1.20 or higher
-- Dependencies:
-  - github.com/mark3labs/mcp-go v0.13.0
-  - github.com/sergeymakinen/go-ico
-  - github.com/tdewolff/canvas
+- **Go 1.20 or higher**
+- **Dependencies**:
+    - `github.com/mark3labs/mcp-go v0.13.0`
+    - `github.com/sergeymakinen/go-ico`
+    - `github.com/tdewolff/canvas`
+
 
 ## Installation
 
 ```bash
-git clone https://github.com/yourusername/favicon-mcp-server.git
+git clone https://github.com/elliotxx/favicon-mcp-server.git
 cd favicon-mcp-server
 go mod download
 ```
 
+
 ## Usage
 
-1. Start the server:
+- **Start the server**:
+
 ```bash
 go run main.go
 ```
 
-2. The server provides one tool: `svg_to_favicon`
+- **Tool Parameters**:
+    - `svg_data`: SVG icon content provided as a string.
+    - `output_formats`: Array of strings specifying the desired output formats (`ico`, `png`). Default: `["ico", "png"]`.
 
-### Tool Parameters
-
-- `svg_data` (required): SVG icon content provided as a string
-- `output_formats` (optional): Array of strings specifying the desired output formats
-  - Supported formats: `ico`, `png`
-  - Default: `["ico", "png"]`
 
 ### Example Response
 
@@ -174,6 +174,55 @@ go build
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
+
+### Integration with Windsurf
+
+To integrate this MCP server with Windsurf, follow these steps:
+
+1. **Open Windsurf** and navigate to the Cascade interface.
+2. **Configure MCP Servers**:
+    - Open the `~/.codeium/windsurf/mcp_config.json` file by clicking the hammer icon and selecting "Configure".
+    - Add the following configuration:
+
+```json
+"mcpServers": {
+  "favicon-mcp-server": {
+    "command": "go",
+    "args": ["run", "main.go"],
+    "cwd": "/path/to/favicon-mcp-server",
+    "env": {}
+  }
+}
+```
+
+Replace `/path/to/favicon-mcp-server` with the actual path to your project directory.
+3. **Refresh Windsurf**:
+    - Click the "Refresh" button in the MCP toolbar to load the new configuration.
+
+### Integration with Cursor
+
+To integrate this MCP server with Cursor, follow these steps:
+
+1. **Enable MCP Servers**:
+    - Navigate to Cursor settings and find the MCP servers option.
+    - Enable MCP servers if not already enabled.
+2. **Add New MCP Server**:
+    - Click "Add new MCP server".
+    - Provide the path to your executable or command to run the server.
+    - For this project, you might need to create a standalone executable or use a bundling tool to simplify integration.
+3. **Configure Server Details**:
+    - Enter the command to run your MCP server. For example:
+
+```bash
+go run main.go
+```
+
+    - Ensure the path to the executable is correct.
+4. **Enable the Server**:
+    - After adding the server, click "Enable" to activate it.
+
+By following these steps, you can integrate the Favicon MCP Server with both Windsurf and Cursor, enhancing your development workflow with AI-powered tools.
+
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License - see the LICENSE file for details
