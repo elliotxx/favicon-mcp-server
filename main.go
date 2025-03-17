@@ -7,16 +7,58 @@ import (
 	"fmt"
 	"image"
 	"image/png"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
-	ico "github.com/sergeymakinen/go-ico"
+	"github.com/sergeymakinen/go-ico"
 	"github.com/srwiley/oksvg"
 	"github.com/srwiley/rasterx"
 )
+
+func main() {
+	// Get the appropriate log directory for the current OS
+	logDir, err := os.UserConfigDir()
+	if err != nil {
+		logDir = os.TempDir()
+	}
+	logDir = filepath.Join(logDir, "favicon-mcp-server")
+
+	// Create log directory if it doesn't exist
+	if err := os.MkdirAll(logDir, 0755); err != nil {
+		log.Fatal("Failed to create log directory:", err)
+	}
+
+	// Create log file
+	logFile, err := os.OpenFile(filepath.Join(logDir, "app.log"), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	if err != nil {
+		log.Fatal("Failed to open log file:", err)
+	}
+	defer logFile.Close()
+
+	// Redirect log output to file
+	log.SetOutput(logFile)
+
+	s := server.NewMCPServer("FaviconGenerator", "1.0.0")
+
+	tool := mcp.NewTool(
+		"svg_to_favicon",
+		mcp.WithDescription("Converts SVG icons into various standard website favicon formats such as ICO and PNG."),
+		mcp.WithString("svg_data", mcp.Description("SVG icon content provided as a string.")),
+		mcp.WithString("svg_file", mcp.Description("Path to the SVG file to convert.")),
+		mcp.WithString("output_dir", mcp.Description("Directory to save the output files. If not provided, returns base64 encoded data.")),
+		mcp.WithArray("output_formats", mcp.Description("An array of strings specifying the desired output formats.")),
+	)
+	s.AddTool(tool, faviconHandler)
+
+	log.Println("Starting MCP server...")
+	if err := server.ServeStdio(s); err != nil {
+		log.Printf("Server error: %v\n", err)
+	}
+}
 
 // FaviconHandler handles the invocation of the svg_to_favicon tool
 func faviconHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -24,22 +66,22 @@ func faviconHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.Call
 	var svgData string
 	if svgPath, ok := request.Params.Arguments["svg_file"].(string); ok && svgPath != "" {
 		// Read SVG from file
-		fmt.Println("Reading SVG from file:", svgPath)
+		log.Println("Reading SVG from file:", svgPath)
 		data, err := os.ReadFile(svgPath)
 		if err != nil {
-			fmt.Println("Error reading SVG file:", err)
+			log.Println("Error reading SVG file:", err)
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to read SVG file: %v", err)), nil
 		}
 		svgData = string(data)
-		fmt.Println("Successfully read SVG file, content length:", len(svgData))
+		log.Println("Successfully read SVG file, content length:", len(svgData))
 	} else {
 		// Get SVG from direct input
 		svgData, ok := request.Params.Arguments["svg_data"].(string)
 		if !ok || svgData == "" {
-			fmt.Println("No SVG data provided")
+			log.Println("No SVG data provided")
 			return mcp.NewToolResultError("Either svg_data or svg_file parameter is required"), nil
 		}
-		fmt.Println("Using direct SVG input, content length:", len(svgData))
+		log.Println("Using direct SVG input, content length:", len(svgData))
 	}
 
 	// Define standard favicon sizes and formats
@@ -64,22 +106,22 @@ func faviconHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.Call
 
 	// Check if SVG content is valid
 	if !strings.Contains(svgData, "<svg") {
-		fmt.Println("Error: Invalid SVG content - missing <svg> tag")
+		log.Println("Error: Invalid SVG content - missing <svg> tag")
 		return mcp.NewToolResultError("Invalid SVG content"), nil
 	}
 
 	// Print SVG content preview
 	previewLen := 200
 	if len(svgData) > previewLen {
-		fmt.Printf("SVG content preview (first %d chars): %s...\n", previewLen, svgData[:previewLen])
+		log.Printf("SVG content preview (first %d chars): %s...\n", previewLen, svgData[:previewLen])
 	} else {
-		fmt.Printf("SVG content (full, %d chars): %s\n", len(svgData), svgData)
+		log.Printf("SVG content (full, %d chars): %s\n", len(svgData), svgData)
 	}
 
 	// Parse SVG and create icon
 	icon, err := oksvg.ReadIconStream(strings.NewReader(svgData))
 	if err != nil {
-		fmt.Println("Failed to parse SVG:", err)
+		log.Println("Failed to parse SVG:", err)
 		return mcp.NewToolResultError(fmt.Sprintf("Failed to parse SVG: %v", err)), nil
 	}
 
@@ -97,10 +139,10 @@ func faviconHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.Call
 
 	for elem, attrs := range elements {
 		if strings.Contains(svgData, "<"+elem) {
-			fmt.Printf("Found SVG element: <%s>\n", elem)
+			log.Printf("Found SVG element: <%s>\n", elem)
 			for _, attr := range attrs {
 				if strings.Contains(svgData, attr) {
-					fmt.Printf("  - Has attribute: %s\n", attr)
+					log.Printf("  - Has attribute: %s\n", attr)
 				}
 			}
 			if elem == "text" {
@@ -113,20 +155,20 @@ func faviconHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.Call
 
 	// Print warnings for potential issues
 	if hasText {
-		fmt.Println("Warning: SVG contains text elements which may not render correctly in small sizes")
+		log.Println("Warning: SVG contains text elements which may not render correctly in small sizes")
 	}
 	if hasGradient {
-		fmt.Println("Warning: SVG contains gradients which may not render correctly in all browsers")
+		log.Println("Warning: SVG contains gradients which may not render correctly in all browsers")
 	}
 
 	// Print icon information
-	fmt.Printf("SVG dimensions: ViewBox=%.2fx%.2f, Width=%.2f, Height=%.2f\n",
+	log.Printf("SVG dimensions: ViewBox=%.2fx%.2f, Width=%.2f, Height=%.2f\n",
 		icon.ViewBox.W, icon.ViewBox.H, icon.ViewBox.W, icon.ViewBox.H)
 
 	// Get original dimensions and set icon parameters
 	origW, origH := icon.ViewBox.W, icon.ViewBox.H
 	if origW == 0 || origH == 0 {
-		fmt.Println("Error: Invalid SVG dimensions - width or height is 0")
+		log.Println("Error: Invalid SVG dimensions - width or height is 0")
 		return mcp.NewToolResultError("Invalid SVG dimensions"), nil
 	}
 
@@ -187,15 +229,15 @@ func faviconHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.Call
 
 	// Get output directory
 	outputDir, ok := request.Params.Arguments["output_dir"].(string)
-	fmt.Println("Output directory:", outputDir, "(exists:", ok, ")")
+	log.Println("Output directory:", outputDir, "(exists:", ok, ")")
 	if ok && outputDir != "" {
-		fmt.Println("Creating output directory:", outputDir)
+		log.Println("Creating output directory:", outputDir)
 		// Create output directory if it doesn't exist
 		if err := os.MkdirAll(outputDir, 0755); err != nil {
-			fmt.Println("Error creating output directory:", err)
+			log.Println("Error creating output directory:", err)
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to create output directory: %v", err)), nil
 		}
-		fmt.Println("Successfully created output directory")
+		log.Println("Successfully created output directory")
 
 		// Save PNG files
 		for fileName, buf := range pngImages {
@@ -209,7 +251,7 @@ func faviconHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.Call
 		if len(icoImages) > 0 {
 			icoBuf := new(bytes.Buffer)
 			if err := ico.EncodeAll(icoBuf, icoImages); err != nil {
-				fmt.Println("ICO encoding error:", err)
+				log.Println("ICO encoding error:", err)
 				results["ico_error"] = err.Error()
 			} else {
 				if err := os.WriteFile(filepath.Join(outputDir, "favicon.ico"), icoBuf.Bytes(), 0644); err != nil {
@@ -219,7 +261,7 @@ func faviconHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.Call
 			}
 		}
 	} else {
-		fmt.Println("No output directory specified, will return base64 encoded data")
+		log.Println("No output directory specified, will return base64 encoded data")
 		// Return base64 encoded data
 		pngResult := make(map[string]string)
 		for fileName, buf := range pngImages {
@@ -231,7 +273,7 @@ func faviconHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.Call
 		if len(icoImages) > 0 {
 			icoBuf := new(bytes.Buffer)
 			if err := ico.EncodeAll(icoBuf, icoImages); err != nil {
-				fmt.Println("ICO encoding error:", err)
+				log.Println("ICO encoding error:", err)
 				results["ico_error"] = err.Error()
 			} else {
 				results["ico"] = base64.StdEncoding.EncodeToString(icoBuf.Bytes())
@@ -259,23 +301,4 @@ func contains(slice []string, item string) bool {
 		}
 	}
 	return false
-}
-
-func main() {
-	s := server.NewMCPServer("FaviconGenerator", "1.0.0")
-
-	tool := mcp.NewTool(
-		"svg_to_favicon",
-		mcp.WithDescription("Converts SVG icons into various standard website favicon formats such as ICO and PNG."),
-		mcp.WithString("svg_data", mcp.Description("SVG icon content provided as a string.")),
-		mcp.WithString("svg_file", mcp.Description("Path to the SVG file to convert.")),
-		mcp.WithString("output_dir", mcp.Description("Directory to save the output files. If not provided, returns base64 encoded data.")),
-		mcp.WithArray("output_formats", mcp.Description("An array of strings specifying the desired output formats.")),
-	)
-	s.AddTool(tool, faviconHandler)
-
-	fmt.Println("Starting MCP server...")
-	if err := server.ServeStdio(s); err != nil {
-		fmt.Printf("Server error: %v\n", err)
-	}
 }
