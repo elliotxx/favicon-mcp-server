@@ -62,6 +62,8 @@ func main() {
 
 // FaviconHandler handles the invocation of the svg_to_favicon tool
 func faviconHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	log.Println("Received favicon generation request")
+	log.Printf("Request params: %+v\n", request.Params)
 	// Get SVG data either from direct input or file
 	var svgData string
 	if svgPath, ok := request.Params.Arguments["svg_file"].(string); ok && svgPath != "" {
@@ -227,71 +229,65 @@ func faviconHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.Call
 
 	results := make(map[string]interface{})
 
-	// Get output directory
-	outputDir, ok := request.Params.Arguments["output_dir"].(string)
-	log.Println("Output directory:", outputDir, "(exists:", ok, ")")
-	if ok && outputDir != "" {
-		log.Println("Creating output directory:", outputDir)
-		// Create output directory if it doesn't exist
-		if err := os.MkdirAll(outputDir, 0755); err != nil {
-			log.Println("Error creating output directory:", err)
-			return mcp.NewToolResultError(fmt.Sprintf("Failed to create output directory: %v", err)), nil
-		}
-		log.Println("Successfully created output directory")
+	// Use current directory for output
+	outputDir := "./output"
+	if err := os.MkdirAll(outputDir, 0755); err != nil {
+		log.Printf("Failed to create output directory: %v\n", err)
+		return mcp.NewToolResultError(fmt.Sprintf("Failed to create output directory: %v", err)), nil
+	}
 
-		// Save PNG files
-		for fileName, buf := range pngImages {
-			if err := os.WriteFile(filepath.Join(outputDir, fileName), buf.Bytes(), 0644); err != nil {
-				return mcp.NewToolResultError(fmt.Sprintf("Failed to write PNG file: %v", err)), nil
-			}
-		}
-
-		// Save ICO file
-		// Save ICO file if we have the required images
-		if len(icoImages) > 0 {
-			icoBuf := new(bytes.Buffer)
-			if err := ico.EncodeAll(icoBuf, icoImages); err != nil {
-				log.Println("ICO encoding error:", err)
-				results["ico_error"] = err.Error()
-			} else {
-				if err := os.WriteFile(filepath.Join(outputDir, "favicon.ico"), icoBuf.Bytes(), 0644); err != nil {
-					return mcp.NewToolResultError(fmt.Sprintf("Failed to write ICO file: %v", err)), nil
-				}
-				results["ico"] = base64.StdEncoding.EncodeToString(icoBuf.Bytes())
-			}
-		}
-	} else {
-		log.Println("No output directory specified, will return base64 encoded data")
-		// Return base64 encoded data
-		pngResult := make(map[string]string)
-		for fileName, buf := range pngImages {
-			pngResult[fileName] = base64.StdEncoding.EncodeToString(buf.Bytes())
-		}
-		results["png"] = pngResult
-
-		// Generate ICO file if we have the required images
-		if len(icoImages) > 0 {
-			icoBuf := new(bytes.Buffer)
-			if err := ico.EncodeAll(icoBuf, icoImages); err != nil {
-				log.Println("ICO encoding error:", err)
-				results["ico_error"] = err.Error()
-			} else {
-				results["ico"] = base64.StdEncoding.EncodeToString(icoBuf.Bytes())
-			}
+	// Save PNG files
+	for fileName, buf := range pngImages {
+		if err := os.WriteFile(filepath.Join(outputDir, fileName), buf.Bytes(), 0644); err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to write PNG file: %v", err)), nil
 		}
 	}
 
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{
-			&mcp.TextContent{
-				Type: "text",
-				Text: "Successfully generated favicons",
-			},
+	// Save ICO file
+	// Save ICO file if we have the required images
+	if len(icoImages) > 0 {
+		icoBuf := new(bytes.Buffer)
+		if err := ico.EncodeAll(icoBuf, icoImages); err != nil {
+			log.Println("ICO encoding error:", err)
+			results["ico_error"] = err.Error()
+		} else {
+			if err := os.WriteFile(filepath.Join(outputDir, "favicon.ico"), icoBuf.Bytes(), 0644); err != nil {
+				return mcp.NewToolResultError(fmt.Sprintf("Failed to write ICO file: %v", err)), nil
+			}
+			results["ico"] = base64.StdEncoding.EncodeToString(icoBuf.Bytes())
+		}
+	}
+
+	// Return file paths in content
+	contents := []mcp.Content{
+		&mcp.TextContent{
+			Type: "text",
+			Text: "Successfully generated favicons",
 		},
-		Result: mcp.Result{
-			Meta: results,
-		},
-	}, nil
+	}
+
+	// Add PNG file paths
+	for name := range pngImages {
+		contents = append(contents, &mcp.TextContent{
+			Type: "text",
+			Text: fmt.Sprintf("PNG file %s saved to: %s", name, filepath.Join(outputDir, name)),
+		})
+	}
+
+	// Add ICO file path
+	if len(icoImages) > 0 {
+		contents = append(contents, &mcp.TextContent{
+			Type: "text",
+			Text: fmt.Sprintf("ICO file saved to: %s", filepath.Join(outputDir, "favicon.ico")),
+		})
+	}
+
+	result := &mcp.CallToolResult{
+		Content: contents,
+	}
+
+	log.Println("Returning result with file paths")
+	return result, nil
 }
 
 func contains(slice []string, item string) bool {
