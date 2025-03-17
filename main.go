@@ -20,28 +20,6 @@ import (
 )
 
 func main() {
-	// Get the appropriate log directory for the current OS
-	logDir, err := os.UserConfigDir()
-	if err != nil {
-		logDir = os.TempDir()
-	}
-	logDir = filepath.Join(logDir, "favicon-mcp-server")
-
-	// Create log directory if it doesn't exist
-	if err := os.MkdirAll(logDir, 0755); err != nil {
-		log.Fatal("Failed to create log directory:", err)
-	}
-
-	// Create log file
-	logFile, err := os.OpenFile(filepath.Join(logDir, "app.log"), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
-	if err != nil {
-		log.Fatal("Failed to open log file:", err)
-	}
-	defer logFile.Close()
-
-	// Redirect log output to file
-	log.SetOutput(logFile)
-
 	s := server.NewMCPServer("FaviconGenerator", "1.0.0")
 
 	tool := mcp.NewTool(
