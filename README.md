@@ -2,6 +2,8 @@
 
 A Model Control Protocol (MCP) server that converts SVG images into various favicon formats (ICO and PNG) for web applications.
 
+https://github.com/user-attachments/assets/7dcab05c-2340-4f8b-befc-7614b495685f
+
 ## Features
 
 - **SVG to ICO Conversion**: Convert SVG images to ICO format (16x16, 32x32, 48x48 pixels).
